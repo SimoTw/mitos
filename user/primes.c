@@ -4,52 +4,63 @@
 
 #define R 0
 #define W 1
-#define True 1
-#define False 0
 
 int main(int argc, char *argv[]) {
-    int mod, pid, i, num;
-    int writer_pipe[2];
-    int reader_pipe[2];
-    mod = 0;
+    int first_pipe[2];
+    int second_pipe[2];
+    int *left_pipe, *right_pipe;
+    int i, num, prime, pid, n;
+    int *temp;
 
-    pid = fork();
-    pipe(writer_pipe);
-    pipe(reader_pipe);
-
-    if (pid > 0) {
-        // root parent producer
-        close(writer_pipe[R]);
-        close(reader_pipe[W]);
-        for(i = 0; i < 35; i++) {
-            write(writer_pipe[W], &i, sizeof(i));
+    pipe(first_pipe);
+    if (fork() > 0) {
+        close(first_pipe[R]);
+        for(i = 2; i <= 35; i++) {
+            write(first_pipe[W], &i, sizeof(i));
         }
-        close(writer_pipe[W]);
-        wait(0);
-        while (read(reader_pipe[R], &num, sizeof(num))) 
-            printf("prime %d\n", num);
-        
-        exit(0);
+        write(first_pipe[W], "\0", 1);
+        close(first_pipe[W]);
+        printf("exfore wait");
+
+        wait((int *)0);
+        printf("after wait");
+
     } else {
-    // child process    
-        while (mod <= 35) {
+        pipe(second_pipe);
+        left_pipe = first_pipe;
+        right_pipe = second_pipe;
+        for(;;) {
             pid = fork();
-            if (pid < 0) {
-                fprintf(2, "fork error");
-                exit(1);
-            }
-            if (pid == 0) { 
-                close(reader_pipe[W]);
-                close(writer_pipe[R]);
-                int num;
-                while (read(reader_pipe[0], &num, sizeof num) > 0) {
-                    if (num % mod != 0) {
-                        write(writer_pipe[R], &num, sizeof num);
+            if (pid == 0) {
+                close(left_pipe[1]);
+                close(right_pipe[0]);
+                n = read(left_pipe[0], &prime, sizeof(prime));
+                if (n <= 1) {
+                 exit(0);
+
+                }
+                printf("prime %d\n", prime);
+                for (;;) {
+                    n = read(left_pipe[0], &num, sizeof num);
+                    if (n <= 1) {
+                        write(right_pipe[1], "\0", 1);
+                        break;
+                    }
+                    if (num % prime != 0) {
+                        write(right_pipe[1], &num, sizeof num);
                     }
                 }
-                close(reader_pipe[R]);
-                close(writer_pipe[W]);
+                close(left_pipe[0]);
+                close(right_pipe[1]);
+                exit(0);
+            } else {
+                wait((int *)0);
+                temp = left_pipe;
+                left_pipe = right_pipe;
+                right_pipe = temp;
             }
         }
     }
+    exit(0);
+
 }
