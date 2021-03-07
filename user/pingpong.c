@@ -20,8 +20,8 @@ void messageServer(char *message, int readfds[], int writefds[], int mode) {
             ops++;
         }
     }
-    close(readfds[0]);
     close(writefds[1]);
+    close(readfds[0]);
     exit(0);
 }
 
@@ -37,4 +37,5 @@ int main(int argc, char **argv) {
     } else {  //parent
         messageServer("pong", ctpfds, ptcfds, 1);
     }
+    exit(0);
 }
